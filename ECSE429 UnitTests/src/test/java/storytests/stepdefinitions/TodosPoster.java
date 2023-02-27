@@ -75,6 +75,38 @@ public class TodosPoster {
     return response;
   }
 
+  /**
+   * Adds todos if it is not already there and associates with a category
+   */
+  public static HttpResponse postWithCategoryIfNotPresent(String title, String doneStatus, String description, String categoryId) throws IOException, InterruptedException {
+    // Search for the todos with the title to confirm whether they exist
+    HttpRequest todosGetRequest = HttpRequest.newBuilder()
+        .uri(URI.create(TODOS_BASE_URL + "?title=" + title.replaceAll(" ", "%20"))).build();
+    HttpResponse<String> response = todosClient.send(todosGetRequest, HttpResponse.BodyHandlers.ofString());
+
+    // Now attempt to parse the todos list
+    JSONObject responseJson = new JSONObject(response.body());
+    JSONArray todosList = responseJson.getJSONArray("todos");
+
+    if (todosList.length() == 0) {
+      HttpRequest todoForPut = HttpRequest.newBuilder()
+          .uri(URI.create(TODOS_BASE_URL))
+          .POST(HttpRequest.BodyPublishers.ofString("{" +
+              "    \"title\": \"" + title + "\"," +
+              "    \"doneStatus\": " + doneStatus + "," +
+              "    \"description\": \"" + description + "\"," +
+              "    \"categories\": [" +
+              "        {" +
+              "            \"id\": \"" + categoryId +"\"" +
+              "        }" +
+              "    ]" +
+              "}"))
+          .build();
+      return todosClient.send(todoForPut, HttpResponse.BodyHandlers.ofString());
+    }
+    return response;
+  }
+
   public static JSONObject getTodoByName(String title) throws IOException, InterruptedException {
     HttpRequest todosGetRequest = HttpRequest.newBuilder()
         .uri(URI.create(TODOS_BASE_URL + "?title=" + title.replaceAll(" ", "%20"))).build();
@@ -112,6 +144,35 @@ public class TodosPoster {
         return true;
       }
     }
+    return false;
+  }
+
+  public static boolean categoryHasTodo(String categoryId, String todoName) throws IOException, InterruptedException {
+    JSONObject todo = getTodoByName(todoName);
+    JSONArray categories = todo.getJSONArray("categories");
+
+    for (int i = 0; i < categories.length(); i++) {
+      JSONObject category = categories.getJSONObject(i);
+      if (category.getString("id").equals(categoryId)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static boolean categoryIsPresent(String categoryName) throws IOException, InterruptedException {
+    HttpRequest projectsGetRequest = HttpRequest.newBuilder().uri(URI.create("http://localhost:4567/categories")).build();
+    HttpResponse<String> getResponse = todosClient.send(projectsGetRequest, HttpResponse.BodyHandlers.ofString());
+    JSONObject responseJson = new JSONObject(getResponse.body());
+    JSONArray categories = responseJson.getJSONArray("categories");
+
+    for (int i = 0; i < categories.length(); i++) {
+      JSONObject projectTask = categories.getJSONObject(i);
+      if (projectTask.getString("title").equals(categoryName)) {
+        return true;
+      }
+    }
+
     return false;
   }
 }
