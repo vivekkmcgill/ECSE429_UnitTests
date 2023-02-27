@@ -19,7 +19,7 @@ Feature: Adding todos to a project
 
     Scenario Outline: Existing TODOs are associated to a project [Alternate]
         When a project manager associates a TODO with a project
-        Then the coresponding project is added to the todo's tasksof list
+        Then the coresponding project is associated to the todo's tasksof list
         Examples:
             | title                  | doneStatus | description                 | tasksof |
             | Add submit button      | false      | Add a button to submit form |    1    |

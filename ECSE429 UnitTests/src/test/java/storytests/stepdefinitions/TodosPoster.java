@@ -9,6 +9,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class TodosPoster {
 
   private static final String TODOS_BASE_URL = "http://localhost:4567/todos";
@@ -87,5 +89,29 @@ public class TodosPoster {
     } else {
       return new JSONObject();
     }
+  }
+
+  public static boolean projectHasTodo(String todoName) throws IOException, InterruptedException {
+    JSONObject todo = getTodoByName(todoName);
+    String id = todo.getString("id");
+
+    HttpRequest projectsGetRequest = HttpRequest.newBuilder().uri(URI.create(TODOS_BASE_URL + "/" + id + "/tasksof")).build();
+    HttpResponse<String> getResponse = todosClient.send(projectsGetRequest, HttpResponse.BodyHandlers.ofString());
+    JSONObject responseJson = new JSONObject(getResponse.body());
+    JSONArray tasksof = responseJson.getJSONArray("projects");
+    JSONArray projectTasks = tasksof.getJSONObject(0).getJSONArray("tasks");
+
+    // Check that the proper structure is returned
+    assertEquals("1", tasksof.getJSONObject(0).getString("id"));
+    assertEquals("Office Work", tasksof.getJSONObject(0).getString("title"));
+    assertEquals("", tasksof.getJSONObject(0).getString("description"));
+
+    for (int i = 0; i < projectTasks.length(); i++) {
+      JSONObject projectTask = projectTasks.getJSONObject(i);
+      if (projectTask.getString("id").equals(id)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
