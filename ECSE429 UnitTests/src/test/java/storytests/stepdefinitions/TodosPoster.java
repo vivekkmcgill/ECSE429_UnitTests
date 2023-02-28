@@ -1,6 +1,7 @@
 package storytests.stepdefinitions;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -131,7 +132,13 @@ public class TodosPoster {
     HttpResponse<String> getResponse = todosClient.send(projectsGetRequest, HttpResponse.BodyHandlers.ofString());
     JSONObject responseJson = new JSONObject(getResponse.body());
     JSONArray tasksof = responseJson.getJSONArray("projects");
-    JSONArray projectTasks = tasksof.getJSONObject(0).getJSONArray("tasks");
+    JSONArray projectTasks;
+    try {
+      projectTasks = tasksof.getJSONObject(0).getJSONArray("tasks");
+    } catch (JSONException e) {
+      return false;
+    }
+
 
     // Check that the proper structure is returned
     assertEquals("1", tasksof.getJSONObject(0).getString("id"));
@@ -169,6 +176,43 @@ public class TodosPoster {
     for (int i = 0; i < categories.length(); i++) {
       JSONObject projectTask = categories.getJSONObject(i);
       if (projectTask.getString("title").equals(categoryName)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public static HttpResponse dissasociateFromProject(String projectId, String todoId) throws IOException, InterruptedException {
+    String todoUrl = TODOS_BASE_URL + "/" + todoId + "/tasksof/" + projectId;
+
+    // Request delete of the todos
+    HttpRequest todosDeleteRequest = HttpRequest.newBuilder()
+        .uri(URI.create(todoUrl))
+        .DELETE()
+        .build();
+    HttpResponse<String> deleteResponse = todosClient.send(todosDeleteRequest, HttpResponse.BodyHandlers.ofString());
+
+    return deleteResponse;
+  }
+
+  public static HttpResponse deleteTodo(String todoId) throws IOException, InterruptedException {
+
+    String todoUrl = TODOS_BASE_URL + "/" + todoId;
+
+    // Request delete of the todos
+    HttpRequest todosPutRequest = HttpRequest.newBuilder()
+        .uri(URI.create(todoUrl))
+        .DELETE()
+        .build();
+    return todosClient.send(todosPutRequest, HttpResponse.BodyHandlers.ofString());
+  }
+
+  public static boolean todoInProject(JSONArray tasks, String todoId) throws IOException, InterruptedException {
+
+    for (int i = 0; i < tasks.length(); i++) {
+      JSONObject projectTask = tasks.getJSONObject(i);
+      if (projectTask.getString("id").equals(todoId)) {
         return true;
       }
     }

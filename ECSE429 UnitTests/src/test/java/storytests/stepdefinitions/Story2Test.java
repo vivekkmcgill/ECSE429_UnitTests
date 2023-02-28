@@ -88,7 +88,12 @@ public class Story2Test {
   @Then("the corresponding category is added to the todos categories list")
   public void testAlternateFlow() throws IOException, InterruptedException {
     // Post todos and associate to a project with id 1
-    HttpResponse response = TodosPoster.postWithCategoryIfNotPresent("Wash dishes", "false", "wash your dishes", "2");
+    HttpResponse response = TodosPoster
+        .postWithCategoryIfNotPresent(
+            "Wash dishes",
+            "false",
+            "wash your dishes",
+            "2");
     assertTrue(response.statusCode() == 200 || response.statusCode() == 201);
 
     JSONObject todo = TodosPoster.getTodoByName("Wash dishes");

@@ -53,7 +53,11 @@ public class Story1Test {
   @Then("the coresponding project is added to the todo's tasksof list")
   public void testNormalFlow() throws IOException, InterruptedException {
     // Post todos and associate to a project with id 1
-    HttpResponse response = TodosPoster.postWithProjectIfNotPresent("Add name field", "true", "Add a name field to form", "1");
+    HttpResponse response = TodosPoster
+        .postWithProjectIfNotPresent(
+            "Add name field",
+            "true",
+            "Add a name field to form", "1");
     assertTrue(response.statusCode() == 200 || response.statusCode() == 201);
 
     JSONObject todo = TodosPoster.getTodoByName("Add name field");
