@@ -126,6 +126,11 @@ public class TodosPoster {
 
   public static boolean projectHasTodo(String todoName) throws IOException, InterruptedException {
     JSONObject todo = getTodoByName(todoName);
+
+    if (!todo.has("id")) {
+      return false;
+    }
+
     String id = todo.getString("id");
 
     HttpRequest projectsGetRequest = HttpRequest.newBuilder().uri(URI.create(TODOS_BASE_URL + "/" + id + "/tasksof")).build();

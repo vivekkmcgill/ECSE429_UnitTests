@@ -67,7 +67,6 @@ public class Story3Test {
   @Then("the coresponding project is removed from the todo's tasksof list")
   public void testNormalFlow() throws IOException, InterruptedException {
     JSONObject todoToDisassociate = TodosPoster.getTodoByName("Add submit button");
-    System.out.println(todoToDisassociate.toString());
     String id = todoToDisassociate.getString("id");
 
     String getTodoTasksOfUrl = TODOS_BASE_URL + "/" + id + "/tasksof";
@@ -85,6 +84,15 @@ public class Story3Test {
     JSONObject responseJson = new JSONObject(newGetResponse.body());
     JSONArray todos = responseJson.getJSONArray("projects");
     assertEquals(0, todos.length());
+
+    // Restore state
+    HttpRequest todosPostRequest = HttpRequest.newBuilder()
+        .uri(URI.create(TODOS_BASE_URL + "/" + id + "/tasksof"))
+        .POST(HttpRequest.BodyPublishers.ofString("{" +
+            "    \"id\": \"1\"" +
+            "}"))
+        .build();
+    todosClient.send(todosPostRequest, HttpResponse.BodyHandlers.ofString());
   }
 
   @When("a project manager deletes a TODO that is associated with a project")
@@ -113,6 +121,12 @@ public class Story3Test {
     JSONArray tasks = projects.getJSONObject(0).getJSONArray("tasks");
     assertFalse(TodosPoster.todoInProject(tasks, id));
 
+    // Restore state
+    TodosPoster.postWithProjectIfNotPresent(
+            "Design search bar",
+            "false",
+            "Design the search bar",
+            "1");
   }
 
   @When("a project manager tries to remove a todo associated to a project, but forgets that it was already removed earlier")
@@ -123,14 +137,16 @@ public class Story3Test {
 
     String getTodoTasksOfUrl = TODOS_BASE_URL + "/" + id + "/tasksof";
 
+    // If not disassociated yet, do so
+    TodosPoster.dissasociateFromProject("1", id);
+
     // Check that the project doesn't have the task
-    assertFalse(TodosPoster.projectHasTodo(id));
+    assertFalse(TodosPoster.projectHasTodo("scan paperwork"));
 
     // Before state - The todos with id has a tasksof association of id 1
     HttpRequest todosGetRequest = HttpRequest.newBuilder().uri(URI.create(getTodoTasksOfUrl)).build();
     HttpResponse<String> getResponse = todosClient.send(todosGetRequest, HttpResponse.BodyHandlers.ofString());
     assertEquals(200, getResponse.statusCode());
-    assertTrue(TodosPoster.projectHasTodo("scan paperwork"));
 
     // Call helper method to remove task from project even though it isn't associated to it
     HttpResponse response = TodosPoster.dissasociateFromProject("1", id);
@@ -138,5 +154,14 @@ public class Story3Test {
 
     // Check that the project still doesn't have the task
     assertFalse(TodosPoster.projectHasTodo(id));
+
+    // Restore system state
+    HttpRequest todosPostRequest = HttpRequest.newBuilder()
+        .uri(URI.create(TODOS_BASE_URL + "/" + id + "/tasksof"))
+        .POST(HttpRequest.BodyPublishers.ofString("{" +
+            "    \"id\": \"1\"" +
+            "}"))
+        .build();
+    todosClient.send(todosPostRequest, HttpResponse.BodyHandlers.ofString());
   }
 }
