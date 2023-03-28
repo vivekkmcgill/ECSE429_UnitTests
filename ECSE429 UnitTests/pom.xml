@@ -42,6 +42,11 @@
             <artifactId>junit-platform-suite-engine</artifactId>
             <version>1.8.1</version>
         </dependency>
+        <dependency>
+            <groupId>com.github.javafaker</groupId>
+            <artifactId>javafaker</artifactId>
+            <version>1.0.2</version>
+        </dependency>
     </dependencies>
 
 </project>

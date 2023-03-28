@@ -1,3 +1,5 @@
+package performancetests;
+
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URI;
@@ -5,7 +7,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.ArrayList;
 
+import com.github.javafaker.Faker;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -229,6 +233,12 @@ public class TodosBaseTest {
 
   @Test
   void test_PostTodosValidBody() throws IOException, InterruptedException {
+    Faker faker = new Faker();
+
+    String name = faker.name().fullName();
+    boolean doneStatus = faker.bool().bool();
+    String description = faker.business().toString();
+
     // Everything in the payload is valid except the done status is a string boolean
     HttpRequest todosPostRequest = HttpRequest.newBuilder()
         .uri(URI.create(TODOS_BASE_URL))
@@ -521,5 +531,233 @@ public class TodosBaseTest {
     // Make sure that the correct error code is returned
     assertEquals(404, response.statusCode());
 
+  }
+
+  @Test
+  void test_PostTodosTestPerformance() throws IOException, InterruptedException {
+    ArrayList<Long> postTimes = new ArrayList<>();
+
+     postTimes.add(testTodosPostPerformance(1));
+     postTimes.add(testTodosPostPerformance(10));
+     postTimes.add(testTodosPostPerformance(50));
+     postTimes.add(testTodosPostPerformance(100));
+     postTimes.add(testTodosPostPerformance(1000));
+     postTimes.add(testTodosPostPerformance(5000));
+     postTimes.add(testTodosPostPerformance(10000));
+     postTimes.add(testTodosPostPerformance(50000));
+     postTimes.add(testTodosPostPerformance(100000));
+
+    System.out.println(postTimes);
+  }
+
+  @Test
+  void test_DeleteTodosTestPerformance() throws IOException, InterruptedException {
+    ArrayList<Long> deleteTimes = new ArrayList<>();
+
+     deleteTimes.add(testTodosDeletePerformance(1));
+     deleteTimes.add(testTodosDeletePerformance(10));
+     deleteTimes.add(testTodosDeletePerformance(50));
+     deleteTimes.add(testTodosDeletePerformance(100));
+     deleteTimes.add(testTodosDeletePerformance(1000));
+     deleteTimes.add(testTodosDeletePerformance(5000));
+     deleteTimes.add(testTodosDeletePerformance(10000));
+
+    System.out.println(deleteTimes);
+  }
+
+  @Test
+  void test_PutTodosTestPerformance() throws IOException, InterruptedException {
+    ArrayList<Long> putTimes = new ArrayList<>();
+
+    putTimes.add(testTodosPutPerformance(1));
+    putTimes.add(testTodosPutPerformance(10));
+    putTimes.add(testTodosPutPerformance(50));
+    putTimes.add(testTodosPutPerformance(100));
+    putTimes.add(testTodosPutPerformance(1000));
+    putTimes.add(testTodosPutPerformance(5000));
+    putTimes.add(testTodosPutPerformance(10000));
+
+    System.out.println(putTimes);
+  }
+
+  // Helper method to post and delete multiple todos and track the time taken
+  private long testTodosPostPerformance(int numTodos) throws IOException, InterruptedException {
+    Faker faker = new Faker();
+    HttpRequest todosPostRequest;
+    String name; // Name will be a random name
+    boolean doneStatus; // Boolean will be random every time
+    String description; // Description will be random
+    long startTime, endTime, totalTime = 0;
+
+    // Repeat n times: Keep creating random todos and measure the time taken
+    for (int i = 0; i < numTodos; i++) {
+      name = faker.name().firstName();
+      doneStatus = faker.bool().bool();
+      description = faker.address().fullAddress();
+
+      todosPostRequest = HttpRequest.newBuilder()
+          .uri(URI.create(TODOS_BASE_URL))
+          .POST(HttpRequest.BodyPublishers.ofString("{" +
+              "    \"title\": \"" + name + "\"," +
+              "    \"doneStatus\": " + doneStatus + "," +
+              "    \"description\": \"" + description + "\"," +
+              "    \"tasksof\": [" +
+              "        {" +
+              "            \"id\": \"1\"" +
+              "        }" +
+              "    ]," +
+              "    \"categories\": [" +
+              "        {" +
+              "            \"id\": \"1\"" +
+              "        }" +
+              "    ]" +
+              "}"))
+          .build();
+
+
+      // Only measure the time to send the actual REST request and receive a response
+      startTime = System.nanoTime();
+      todosClient.send(todosPostRequest, BodyHandlers.ofString());
+      endTime = System.nanoTime();
+
+      totalTime += endTime - startTime;
+
+      // Restore the state
+      TodosPoster.deleteTodo(name);
+    }
+
+    return totalTime;
+  }
+
+  // Helper method to post and delete multiple todos and track the time taken
+  private long testTodosDeletePerformance(int numTodos) throws IOException, InterruptedException {
+    Faker faker = new Faker();
+    HttpRequest todosPostRequest;
+    HttpRequest todosDeleteRequest;
+    String name; // Name will be a random name
+    boolean doneStatus; // Boolean will be random every time
+    String description; // Description will be random
+    long startTime, endTime, totalTime = 0;
+
+    // Repeat n times: Keep creating random todos
+    for (int i = 0; i < numTodos; i++) {
+      name = Integer.toString(i);
+      doneStatus = faker.bool().bool();
+      description = faker.address().fullAddress();
+
+      todosPostRequest = HttpRequest.newBuilder()
+          .uri(URI.create(TODOS_BASE_URL))
+          .POST(HttpRequest.BodyPublishers.ofString("{" +
+              "    \"title\": \"" + name + "\"," +
+              "    \"doneStatus\": " + doneStatus + "," +
+              "    \"description\": \"" + description + "\"," +
+              "    \"tasksof\": [" +
+              "        {" +
+              "            \"id\": \"1\"" +
+              "        }" +
+              "    ]," +
+              "    \"categories\": [" +
+              "        {" +
+              "            \"id\": \"1\"" +
+              "        }" +
+              "    ]" +
+              "}"))
+          .build();
+
+      todosClient.send(todosPostRequest, BodyHandlers.ofString());
+    }
+
+    // Repeat n times: Keep deleting todos and measure the time taken
+    for (int i = 0; i < numTodos; i++) {
+
+      String todoId = TodosPoster.getTodoByName(Integer.toString(i)).getString("id");
+
+      String todoUrl = TODOS_BASE_URL + "/" + todoId;
+
+      // Request delete of the todos
+      todosDeleteRequest = HttpRequest.newBuilder()
+          .uri(URI.create(todoUrl))
+          .DELETE()
+          .build();
+
+      // Only measure the time to send the actual REST request and receive a response
+      startTime = System.nanoTime();
+      todosClient.send(todosDeleteRequest, HttpResponse.BodyHandlers.ofString());
+      endTime = System.nanoTime();
+
+      totalTime += endTime - startTime;
+    }
+
+    return totalTime;
+  }
+
+  // Helper method to post and delete multiple todos and track the time taken
+  private long testTodosPutPerformance(int numTodos) throws IOException, InterruptedException {
+    Faker faker = new Faker();
+    HttpRequest todosPostRequest;
+    HttpRequest todosPutRequest;
+    String name; // Name will be a random name
+    String id;
+    boolean doneStatus; // Boolean will be random every time
+    String description; // Description will be random
+    long startTime, endTime, totalTime = 0;
+
+    // Repeat n times: Keep creating random todos
+    for (int i = 0; i < numTodos; i++) {
+      name = Integer.toString(i);
+      doneStatus = faker.bool().bool();
+      description = faker.address().fullAddress();
+
+      todosPostRequest = HttpRequest.newBuilder()
+          .uri(URI.create(TODOS_BASE_URL))
+          .POST(HttpRequest.BodyPublishers.ofString("{" +
+              "    \"title\": \"" + name + "\"," +
+              "    \"doneStatus\": " + doneStatus + "," +
+              "    \"description\": \"" + description + "\"," +
+              "    \"tasksof\": [" +
+              "        {" +
+              "            \"id\": \"1\"" +
+              "        }" +
+              "    ]," +
+              "    \"categories\": [" +
+              "        {" +
+              "            \"id\": \"1\"" +
+              "        }" +
+              "    ]" +
+              "}"))
+          .build();
+
+      todosClient.send(todosPostRequest, BodyHandlers.ofString());
+    }
+
+    // Repeat n times: Keep deleting todos and measure the time taken
+    for (int i = 0; i < numTodos; i++) {
+
+      JSONObject todo = TodosPoster.getTodoByName(Integer.toString(i));
+      id = todo.getString("id");
+      // Change the done status
+      doneStatus = !todo.getBoolean("doneStatus");
+
+      // Request update of the todos
+      todosPutRequest = HttpRequest.newBuilder()
+          .uri(URI.create(TODOS_BASE_URL + "/" + id))
+          .PUT(HttpRequest.BodyPublishers.ofString("{" +
+              "    \"doneStatus\": " + doneStatus + "," +
+              "    \"description\": \"banana\"" +
+              "}"))
+          .build();
+
+      // Only measure the time to send the actual REST request and receive a response
+      startTime = System.nanoTime();
+      HttpResponse response = todosClient.send(todosPutRequest, HttpResponse.BodyHandlers.ofString());
+      endTime = System.nanoTime();
+
+      totalTime += endTime - startTime;
+
+      // Restore the state
+      TodosPoster.deleteTodo(Integer.toString(i));
+    }
+
+    return totalTime;
   }
 }
